@@ -1,19 +1,90 @@
 <!DOCTYPE html>
-<html>
-  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-<script>
-  const socket = io("https://mafia-backend.onrender.com");
-
-  socket.on("connect", () => {
-    console.log("Connected to server:", socket.id);
-  });
-</script>
-
+<html lang="en">
 <head>
-  <title>Mafia by Mussab</title>
+  <meta charset="UTF-8">
+  <title>Mafia Online</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+    #log { background: #fff; border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; }
+    #players { margin-top: 20px; }
+    button { margin: 5px; }
+  </style>
 </head>
 <body>
-  <h1>Welcome to Mafia</h1>
-  <p>Waiting for connection...</p>
+  <h1>Mafia Online</h1>
+
+  <div>
+    <label>Enter your name: </label>
+    <input id="playerName" type="text" placeholder="PlayerName">
+    <button onclick="joinGame()">Join Game</button>
+  </div>
+
+  <h2>Your Role: <span id="role">Not assigned</span></h2>
+
+  <div id="players">
+    <h3>Players:</h3>
+    <ul id="playerList"></ul>
+  </div>
+
+  <div>
+    <h3>Game Log:</h3>
+    <div id="log"></div>
+  </div>
+
+  <!-- Socket.IO client -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    // Replace with your Replit backend URL
+    const socket = io("https://yourproject.yourname.repl.co");
+
+    function log(message) {
+      const logDiv = document.getElementById("log");
+      logDiv.innerHTML += message + "<br>";
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function joinGame() {
+      const name = document.getElementById("playerName").value || "Player";
+      socket.emit("joinGame", { name }, (response) => {
+        if (response.success) {
+          log("Joined as: " + response.player.name);
+        }
+      });
+    }
+
+    // Listen for role assignment
+    socket.on("roleAssigned", (role) => {
+      document.getElementById("role").textContent = role;
+      log("Your role is: " + role);
+    });
+
+    // Listen for game state updates
+    socket.on("gameState", (state) => {
+      const list = document.getElementById("playerList");
+      list.innerHTML = "";
+      for (const id in state.players) {
+        const player = state.players[id];
+        const li = document.createElement("li");
+        li.textContent = player.name + (player.alive ? "" : " (eliminated)");
+        // Add a vote button
+        if (player.alive) {
+          const btn = document.createElement("button");
+          btn.textContent = "Vote";
+          btn.onclick = () => {
+            socket.emit("vote", player.id);
+            log("You voted for " + player.name);
+          };
+          li.appendChild(btn);
+        }
+        list.appendChild(li);
+      }
+      log("Mafia count: " + state.mafiaCount);
+    });
+
+    // Listen for votes being cast
+    socket.on("vote_cast", (data) => {
+      log("Player " + data.from + " voted for " + data.to);
+    });
+  </script>
 </body>
 </html>
